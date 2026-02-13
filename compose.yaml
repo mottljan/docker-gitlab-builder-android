@@ -1,0 +1,12 @@
+services:
+  gitlab-builder-android:
+    build:
+      context: .
+      platforms:
+        - "linux/amd64"
+    image: ackee/gitlab-builder-android:${IMAGE_TAG:-test}
+    stdin_open: true
+    volumes:
+      - ./image-test-app:/image-test-app
+      - ./image-test.sh:/image-test.sh
+    command: bash -e /image-test.sh

@@ -1,0 +1,41 @@
+name: Pull request
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  pull_request:
+    runs-on: ubuntu-24.04
+    permissions:
+      # Allows docker/scout-action to write a comment to PR
+      pull-requests: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+        # We need to login to dhi.io for getting hardened base image and to Docker Hub for using Docker Scout
+      - name: Login
+        uses: ./.github/actions/login
+        with:
+          user-name: ${{ secrets.DOCKER_HUB_USERNAME }}
+          token: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Preflight checks
+        uses: ./.github/actions/common-preflight-check
+        with:
+          image-tag: "pr"
+
+        # We run Docker Scout to check for CVEs only in the PR because we just want to see a report of
+        # vulnerabilities without failing the build (and this behaviour is useless for deploy workflow).
+        # We don't want to ever fail even on critical fixable CVEs because they can come from transitive
+        # dependencies that we don't control and can't usually reliably patch.
+      - name: Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: "cves"
+          only-severities: "critical,high"
+          # Report only CVEs that have a fix available
+          only-fixed: true

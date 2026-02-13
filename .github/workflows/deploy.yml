@@ -1,0 +1,29 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+        # We need to login to dhi.io for getting hardened base image and to Docker Hub for pushing the image
+      - name: Login
+        uses: ./.github/actions/login
+        with:
+          user-name: ${{ secrets.DOCKER_HUB_USERNAME }}
+          token: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Preflight checks
+        uses: ./.github/actions/common-preflight-check
+        with:
+          image-tag: ${{ github.ref_name }}
+
+      - name: Push image
+        shell: bash
+        run: docker compose push

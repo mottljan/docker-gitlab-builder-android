@@ -1,0 +1,36 @@
+name: Common preflight check
+description: Action that contains common checks like building and testing the image. Requires login to dhi.io for getting hardened base image.
+
+inputs:
+  image-tag:
+    description: "Tag of the Ackee Android GitLab builder image"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build image
+      shell: bash
+      env:
+        # Required for building the image
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      # Run shai-hulud detector in paranoid mode to perform more thorough checks
+      run: docker compose build --build-arg SHAI_HULUD_DETECTOR_MODE=--paranoid
+
+    - name: Test image
+      shell: bash
+      env:
+        # Required for testing the image
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      run: |
+        # Give others write permission so the unprivileged user inside a container can write to the folder during Gradle build
+        chmod -R o+w image-test-app
+        docker compose run --rm gitlab-builder-android
+
+    - name: Image lint
+      # dockle is cool and targets exactly what we want to check but looks kinda dead right now. So
+      # far better than nothing but we might need to explore alternative options in the future.
+      uses: erzz/dockle-action@v1
+      with:
+        image: ackee/gitlab-builder-android:${{ inputs.image-tag }}
+        exit-code: 1
