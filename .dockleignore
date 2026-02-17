@@ -1,0 +1,6 @@
+# [Enable Content trust for Docker] - We don't really need this much because only we both publish and pull
+# this image and pin the version so we can't accidentally pull unknown malicious image.
+CIS-DI-0005
+
+# [Add HEALTHCHECK instruction to the container image] - Does not make sense for our CI image.
+CIS-DI-0006

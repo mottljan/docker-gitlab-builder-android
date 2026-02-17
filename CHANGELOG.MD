@@ -1,8 +1,27 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [v3.0.0] - 2026-02-17
+### Changed
+- Complete rewrite of Dockerfile using multi-stage build architecture (separate stages for Java, Android SDK, Danger, Git LFS)
+- Danger JS installation now runs as `nonroot` user to reduce attack surface
+- Node.js installed from system apt packages instead of via nvm
+- Updated Android cmdline-tools to 14742923, platform to 36, build-tools to 36.1.0
+
+### Added
+- Checksum verification for all downloaded artifacts (Java, Kotlin compiler, danger-kotlin)
+- Integration of shai-hulud supply chain attack detector for npm packages
+- npm scripts disabled globally to prevent supply chain attacks
+- Final image runs as `nonroot` user
+
+### Removed
+- Flutter support
+- nvm and Node.js version management
+- Google Cloud CLI
+- Privilege escalation binaries from final image (`su`, `apt`, `apt-get`, `apt-cache`, `dpkg`, `unix_chkpwd`)
 
 ## [v2.8.0] - 2025-12-04
 ### Changed
