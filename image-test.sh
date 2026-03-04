@@ -83,6 +83,7 @@ check_command_exists "sdkmanager"
 check_dir_writable "$ANDROID_HOME"
 check_dir "$ANDROID_HOME/cmdline-tools"
 check_dir "$ANDROID_HOME/licenses"
+check_dir "$ANDROID_HOME/platform-tools"
 
 check_command_exists "danger"
 check_command_exists "danger-kotlin"

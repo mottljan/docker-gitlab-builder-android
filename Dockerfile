@@ -118,6 +118,7 @@ RUN mkdir -p "$CMDLINE_TOOLS_PATH" && \
 # License is valid for all the standard components in versions installed from this file
 # Non-standard components: MIPS system images, preview versions, GDK (Google Glass) and Android Google TV require separate licenses, not accepted there
 RUN yes | sdkmanager --licenses
+RUN sdkmanager "platform-tools"
 
 
 
