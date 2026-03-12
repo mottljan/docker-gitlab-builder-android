@@ -5,8 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v3.0.2] - 2026-03-12
 ### Fixed
 - Fixed missing `fontconfig` dependency for EasyLauncher plugin
+
+### Changed
+- `ANDROID_HOME` from `/opt/android-sdk-linux` to `/opt/android-sdk`
 
 ## [v3.0.1] - 2026-03-04
 ### Fixed
