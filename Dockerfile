@@ -41,7 +41,7 @@ ARG JAVA_VERSION
 
 SHELL ["/bin/bash", "-c"]
 
-ENV ANDROID_HOME="/opt/android-sdk-linux"
+ENV ANDROID_HOME="/opt/android-sdk"
 ENV PATH="$PATH:$ANDROID_HOME/$CMDLINE_TOOLS_DIR/$CMDLINE_TOOLS_VERSION_DIR"
 ENV PATH="$PATH:$ANDROID_HOME/$CMDLINE_TOOLS_DIR/$CMDLINE_TOOLS_VERSION_DIR/bin"
 ENV PATH="$PATH:$ANDROID_HOME/platform-tools"
@@ -199,6 +199,8 @@ LABEL tag="ackee-gitlab" \
       description="This Docker image serves as an environment for running Android builds on Gitlab CI in Ackee workspace"
 
 RUN apt update && apt install -y --no-install-recommends \
+    # Needed for EasyLauncher
+    fontconfig \
     # Needed for danger-js
     nodejs \
     && rm -rf /var/lib/apt/lists/*
