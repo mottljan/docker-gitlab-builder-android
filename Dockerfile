@@ -10,9 +10,8 @@ ARG DANGER_JS_VERSION="12.3.4"
 ARG DANGER_KOTLIN_VERSION="1.3.4"
 ARG DANGER_KOTLIN_CHECKSUM="sha256:232b11680cdfe50c64a6cef1d96d3cd09a857422da1e2dd0464f80c8ddb1afac"
 
-# If you need to update major Java version, you will need to adjust the version in the download link as well
-ARG JAVA_VERSION="17.0.18_8"
-ARG JAVA_CHECKSUM="sha256:0c94cbb54325c40dcf026143eb621562017db5525727f2d9131a11250f72c450"
+# JAVA_VERSION selects both the Temurin base image tag (`<version>-jdk`) and the JAVA_HOME dir name.
+ARG JAVA_VERSION="21.0.11_10"
 
 # Needed for danger-kotlin
 ARG KOTLINC_VERSION="2.2.21"
@@ -75,20 +74,15 @@ RUN npm config set ignore-scripts true
 
 # == java-installation ==
 
+# The JDK is copied from Adoptium's official Temurin image instead of downloading and unpacking the
+# tarball ourselves. `ADD --unpack` corrupts the large (~142MB) Java 21 module image when the build
+# runs under QEMU emulation (e.g. building linux/amd64 on Apple Silicon): lib/modules ends up with
+# zero-filled pages and fails at runtime with "ClassFormatError: Incompatible magic value 0".
+# COPY --from is a native BuildKit op that copies the pre-extracted, known-good bytes.
+FROM eclipse-temurin:${JAVA_VERSION}-jdk AS temurin-jdk
+
 FROM build AS java-installation
-
-ARG JAVA_CHECKSUM
-ARG JAVA_VERSION
-
-ARG JAVA_TEMP_DIR="java"
-# Replace _ with + in version for download link
-ENV JAVA_VERSION_PLUS="${JAVA_VERSION/_/+}"
-ADD --checksum="$JAVA_CHECKSUM" --unpack=true \
-    "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-$JAVA_VERSION_PLUS/OpenJDK17U-jdk_x64_linux_hotspot_$JAVA_VERSION.tar.gz" \
-    "$JAVA_TEMP_DIR"
-RUN mkdir -p "$JAVA_HOME" && \
-    # Temp dir contains unpacked JDK folder, we want to move its contents to JAVA_HOME
-    mv "$JAVA_TEMP_DIR"/*/* "$JAVA_HOME"
+COPY --from=temurin-jdk /opt/java/openjdk "$JAVA_HOME"
 
 
 

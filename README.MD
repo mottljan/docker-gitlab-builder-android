@@ -4,7 +4,7 @@ Docker image providing a complete environment for running Android builds on GitL
 
 ## Contents
 
-- Java 17 (OpenJDK from Eclipse Temurin)
+- Java 21 (OpenJDK from Eclipse Temurin)
 - Android SDK (cmdline-tools, platform tools, build-tools)
 - danger-kotlin + danger-js + Kotlin compiler
 - Node.js (system package, required by danger-js)
