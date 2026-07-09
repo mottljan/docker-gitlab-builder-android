@@ -67,8 +67,10 @@ RUN apt update && apt install -y --no-install-recommends \
     unzip
 
 # Disables npm preinstall, postintall and other scripts that might run when any npm package is installed,
-# which is usually exploited by supply chain attacks like shai-hulud
-RUN npm config set ignore-scripts true
+# which is usually exploited by supply chain attacks like shai-hulud. Set via ENV rather than
+# `npm config set` so it applies to every user (incl. the nonroot install in danger-installation),
+# instead of being written to a single user's ~/.npmrc that a USER switch would bypass.
+ENV npm_config_ignore_scripts=true
 
 
 
