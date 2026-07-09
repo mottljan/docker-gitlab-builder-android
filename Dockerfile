@@ -128,8 +128,14 @@ ARG KOTLINC_BASE_PATH
 ARG KOTLINC_CHECKSUM
 ARG KOTLINC_VERSION
 
+# Recent hardened Debian base images removed /usr/local, so we need to create it ourselves
+RUN mkdir -p "$DANGER_BASE_PATH"
 # chown of directories where danger will be installed, so nonroot npm process can write there
 RUN chown -R nonroot:nonroot "$DANGER_BASE_PATH"
+# Recent hardened Debian base images no longer pin npm's global prefix to /usr/local, so npm
+# defaults to /usr (installs to /usr/lib/node_modules, not writable by nonroot). Pin it back to
+# $DANGER_BASE_PATH so `npm install -g` and `npm root -g` target the chowned, expected location.
+ENV npm_config_prefix="$DANGER_BASE_PATH"
 # Change to nonroot user for npm install to reduce attack surface if compromised
 USER nonroot
 
