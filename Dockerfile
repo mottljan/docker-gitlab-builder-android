@@ -230,6 +230,14 @@ ARG GIT_LFS_PATH="/usr/bin/git-lfs"
 COPY --from=git-lfs-installation "$GIT_LFS_PATH" "$GIT_LFS_PATH"
 RUN git lfs install
 
+# Repositories are often owned by a different UID than the runtime user, e.g. projects bind-mounted
+# from the host (Docker Desktop passes the host UID through) or CI checkouts made under another
+# user. Git >= 2.35.2 then refuses any repo operation with "detected dubious ownership" (exit 128),
+# which breaks Gradle plugins that read git state, like the Ackee plugin deriving version code from
+# `git rev-list HEAD --count`. The ownership check protects multi-user machines, which this
+# single-user container is not, so trust all directories.
+RUN git config --system safe.directory '*'
+
 # Remove binaries that might allow privilege escalation
 RUN rm -f /bin/su
 RUN rm -f /usr/bin/apt /usr/bin/apt-get /usr/bin/apt-cache

@@ -31,6 +31,23 @@ check_command_exists() {
   fi
 }
 
+check_git_foreign_owned_repo() {
+  local repo
+  repo=$(mktemp -d)
+  git init -q "$repo"
+  # GIT_TEST_ASSUME_DIFFERENT_OWNER makes git treat the repo as owned by another user, the same
+  # situation as a project bind-mounted from the host or checked out by CI under a different UID.
+  # Without safe.directory=* in the system gitconfig, git refuses to work in such repos with
+  # "detected dubious ownership" (exit 128), breaking e.g. Gradle plugins that read git state.
+  if GIT_TEST_ASSUME_DIFFERENT_OWNER=1 git -C "$repo" rev-parse --git-dir > /dev/null; then
+    echo "git works in repos owned by another user ✅"
+  else
+    echo "git fails in repos owned by another user (safe.directory not set?) ❌" >&2
+    exit 1
+  fi
+  rm -rf "$repo"
+}
+
 check_dir() {
   local dir=$1
   if [[ -d "$dir" ]]; then
@@ -76,6 +93,7 @@ check_command_missing "sudo"
 echo
 echo "Required custom SW check"
 check_command_exists "git"
+check_git_foreign_owned_repo
 check_command_exists "git-lfs"
 check_command_exists "java"
 
