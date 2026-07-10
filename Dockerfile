@@ -3,20 +3,17 @@
 # == Versions ==
 
 ARG ANDROID_CMDLINE_TOOLS_VERSION="14742923"
-ARG ANDROID_BUILD_TOOLS_VERSION="36.1.0"
-ARG ANDROID_PLATFORM_VERSION="36"
 
 ARG DANGER_JS_VERSION="12.3.4"
 ARG DANGER_KOTLIN_VERSION="1.3.4"
 ARG DANGER_KOTLIN_CHECKSUM="sha256:232b11680cdfe50c64a6cef1d96d3cd09a857422da1e2dd0464f80c8ddb1afac"
 
-# If you need to update major Java version, you will need to adjust the version in the download link as well
-ARG JAVA_VERSION="17.0.18_8"
-ARG JAVA_CHECKSUM="sha256:0c94cbb54325c40dcf026143eb621562017db5525727f2d9131a11250f72c450"
+# JAVA_VERSION selects both the Temurin base image tag (`<version>-jdk`) and the JAVA_HOME dir name.
+ARG JAVA_VERSION="21.0.11_10"
 
 # Needed for danger-kotlin
-ARG KOTLINC_VERSION="2.2.21"
-ARG KOTLINC_CHECKSUM="sha256:a623871f1cd9c938946948b70ef9170879f0758043885bbd30c32f024e511714"
+ARG KOTLINC_VERSION="2.4.0"
+ARG KOTLINC_CHECKSUM="sha256:ba1b9e6eb6ddc3275079224f2e9ea4a2b02eef7d59ce2d38404f04b22613c20a"
 
 # == Others ==
 
@@ -68,27 +65,24 @@ RUN apt update && apt install -y --no-install-recommends \
     unzip
 
 # Disables npm preinstall, postintall and other scripts that might run when any npm package is installed,
-# which is usually exploited by supply chain attacks like shai-hulud
-RUN npm config set ignore-scripts true
+# which is usually exploited by supply chain attacks like shai-hulud. Set via ENV rather than
+# `npm config set` so it applies to every user (incl. the nonroot install in danger-installation),
+# instead of being written to a single user's ~/.npmrc that a USER switch would bypass.
+ENV npm_config_ignore_scripts=true
 
 
 
 # == java-installation ==
 
+# The JDK is copied from Adoptium's official Temurin image instead of downloading and unpacking the
+# tarball ourselves. `ADD --unpack` corrupts the large (~142MB) Java 21 module image when the build
+# runs under QEMU emulation (e.g. building linux/amd64 on Apple Silicon): lib/modules ends up with
+# zero-filled pages and fails at runtime with "ClassFormatError: Incompatible magic value 0".
+# COPY --from is a native BuildKit op that copies the pre-extracted, known-good bytes.
+FROM eclipse-temurin:${JAVA_VERSION}-jdk AS temurin-jdk
+
 FROM build AS java-installation
-
-ARG JAVA_CHECKSUM
-ARG JAVA_VERSION
-
-ARG JAVA_TEMP_DIR="java"
-# Replace _ with + in version for download link
-ENV JAVA_VERSION_PLUS="${JAVA_VERSION/_/+}"
-ADD --checksum="$JAVA_CHECKSUM" --unpack=true \
-    "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-$JAVA_VERSION_PLUS/OpenJDK17U-jdk_x64_linux_hotspot_$JAVA_VERSION.tar.gz" \
-    "$JAVA_TEMP_DIR"
-RUN mkdir -p "$JAVA_HOME" && \
-    # Temp dir contains unpacked JDK folder, we want to move its contents to JAVA_HOME
-    mv "$JAVA_TEMP_DIR"/*/* "$JAVA_HOME"
+COPY --from=temurin-jdk /opt/java/openjdk "$JAVA_HOME"
 
 
 
@@ -97,9 +91,7 @@ RUN mkdir -p "$JAVA_HOME" && \
 # Installs Android SDK. Requires Java to be already installed.
 FROM java-installation AS android-sdk-installation
 
-ARG ANDROID_BUILD_TOOLS_VERSION
 ARG ANDROID_CMDLINE_TOOLS_VERSION
-ARG ANDROID_PLATFORM_VERSION
 ARG CMDLINE_TOOLS_DIR
 ARG CMDLINE_TOOLS_VERSION_DIR
 
@@ -134,8 +126,14 @@ ARG KOTLINC_BASE_PATH
 ARG KOTLINC_CHECKSUM
 ARG KOTLINC_VERSION
 
+# Recent hardened Debian base images removed /usr/local, so we need to create it ourselves
+RUN mkdir -p "$DANGER_BASE_PATH"
 # chown of directories where danger will be installed, so nonroot npm process can write there
 RUN chown -R nonroot:nonroot "$DANGER_BASE_PATH"
+# Recent hardened Debian base images no longer pin npm's global prefix to /usr/local, so npm
+# defaults to /usr (installs to /usr/lib/node_modules, not writable by nonroot). Pin it back to
+# $DANGER_BASE_PATH so `npm install -g` and `npm root -g` target the chowned, expected location.
+ENV npm_config_prefix="$DANGER_BASE_PATH"
 # Change to nonroot user for npm install to reduce attack surface if compromised
 USER nonroot
 
@@ -231,6 +229,14 @@ ENV PATH="$PATH:$KOTLINC_BASE_PATH/kotlinc/bin"
 ARG GIT_LFS_PATH="/usr/bin/git-lfs"
 COPY --from=git-lfs-installation "$GIT_LFS_PATH" "$GIT_LFS_PATH"
 RUN git lfs install
+
+# Repositories are often owned by a different UID than the runtime user, e.g. projects bind-mounted
+# from the host (Docker Desktop passes the host UID through) or CI checkouts made under another
+# user. Git >= 2.35.2 then refuses any repo operation with "detected dubious ownership" (exit 128),
+# which breaks Gradle plugins that read git state, like the Ackee plugin deriving version code from
+# `git rev-list HEAD --count`. The ownership check protects multi-user machines, which this
+# single-user container is not, so trust all directories.
+RUN git config --system safe.directory '*'
 
 # Remove binaries that might allow privilege escalation
 RUN rm -f /bin/su
