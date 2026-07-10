@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Updated Java from 17 to 21 (Eclipse Temurin `21.0.11+10`)
+- Updated Kotlin compiler for danger-kotlin from `2.2.21` to `2.4.0`
 
 ### Security
 - npm `ignore-scripts` is now set via `ENV` (`npm_config_ignore_scripts`) instead of `npm config set`, so the supply-chain protection also applies to the `nonroot` Danger install. Previously the setting was written to root's `~/.npmrc` and silently bypassed after the `USER nonroot` switch, leaving the one third-party install unprotected.
